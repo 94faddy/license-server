@@ -3,13 +3,57 @@ const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-let connectedClients = {};
-let blockedClients = {};
+// ไฟล์สำหรับเก็บข้อมูล
+const DATA_FILE = path.join(__dirname, 'clients_data.json');
 
+// ฟังก์ชันโหลดข้อมูลจากไฟล์
+function loadData() {
+    try {
+        if (fs.existsSync(DATA_FILE)) {
+            const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+            // แปลง string date กลับเป็น Date object
+            for (const clientId in data.connectedClients) {
+                if (data.connectedClients[clientId].last_seen) {
+                    data.connectedClients[clientId].last_seen = new Date(data.connectedClients[clientId].last_seen);
+                }
+            }
+            for (const clientId in data.blockedClients) {
+                if (data.blockedClients[clientId].blocked_at) {
+                    data.blockedClients[clientId].blocked_at = new Date(data.blockedClients[clientId].blocked_at);
+                }
+            }
+            console.log('📂 Loaded data from file');
+            return data;
+        }
+    } catch (error) {
+        console.error('❌ Error loading data:', error.message);
+    }
+    return { connectedClients: {}, blockedClients: {} };
+}
+
+// ฟังก์ชันบันทึกข้อมูลลงไฟล์
+function saveData() {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify({
+            connectedClients,
+            blockedClients
+        }, null, 2));
+    } catch (error) {
+        console.error('❌ Error saving data:', error.message);
+    }
+}
+
+// โหลดข้อมูลตอนเริ่มต้น server
+const savedData = loadData();
+let connectedClients = savedData.connectedClients;
+let blockedClients = savedData.blockedClients;
+
+// Middleware Configuration
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -33,6 +77,7 @@ const requireLogin = (req, res, next) => {
     next();
 };
 
+// Routes
 app.get('/', (req, res) => {
     if (req.session.userId) {
         res.redirect('/dashboard');
@@ -91,6 +136,7 @@ app.post('/block', requireLogin, (req, res) => {
         };
         console.log(`[ADMIN ACTION] Client blocked: ${client_id} at IP ${ip}`);
         delete connectedClients[client_id];
+        saveData(); // บันทึกข้อมูล
     }
     res.redirect('/dashboard');
 });
@@ -100,6 +146,7 @@ app.post('/unblock', requireLogin, (req, res) => {
     if (client_id) {
         delete blockedClients[client_id];
         console.log(`[ADMIN ACTION] Client unblocked: ${client_id}`);
+        saveData(); // บันทึกข้อมูล
     }
     res.redirect('/dashboard');
 });
@@ -148,6 +195,8 @@ app.post('/verify', (req, res) => {
             docker_compose: docker_compose || null
         };
         
+        saveData(); // บันทึกข้อมูล
+        
         return res.status(200).json({ status: 'ok', message: 'License valid' });
     } else {
         console.error(`[FAILED] Invalid key attempt for: ${client_id} (IP: ${clientIp})`);
@@ -155,8 +204,10 @@ app.post('/verify', (req, res) => {
     }
 });
 
+// Start the Server
 app.listen(PORT, () => {
     console.log(`🔑 License Server with Dashboard is running on http://localhost:${PORT}`);
+    console.log(`💾 Data file: ${DATA_FILE}`);
     if (!process.env.ADMIN_PASSWORD_HASH) {
         console.warn('\nWARNING: ADMIN_PASSWORD_HASH is not set in .env file.');
         console.warn('Please run "node generate-hash.js" to create a secure password.\n');
