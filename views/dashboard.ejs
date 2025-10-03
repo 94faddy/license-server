@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
+    <title>Dashboard - License Monitor</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 License Monitoring Dashboard</h1>
+            <form class="logout-form" action="/logout" method="POST"><button type="submit">Logout</button></form>
+        </div>
+
+        <h2>Active Connections</h2>
+        <table class="client-table">
+            <thead>
+                <tr>
+                    <th>Client ID</th>
+                    <th>IP Address</th>
+                    <th>Last Seen</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (Object.keys(clients).length > 0) { %>
+                    <% for(const clientId in clients) { const client = clients[clientId]; %>
+                        <tr>
+                            <td><%= clientId %></td>
+                            <td><%= client.ip %></td>
+                            <td><%= client.last_seen.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) %></td>
+                            <td>
+                                <span class="status-indicator <%= client.status === 'Active' ? 'status-active' : 'status-inactive' %>"></span>
+                                <%= client.status %>
+                            </td>
+                            <td>
+                                <form action="/block" method="POST" style="display: inline;">
+                                    <input type="hidden" name="client_id" value="<%= clientId %>">
+                                    <input type="hidden" name="ip" value="<%= client.ip %>">
+                                    <button type="submit" class="action-btn block">Block</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% } %>
+                <% } else { %>
+                    <tr><td colspan="5" class="no-clients">Waiting for client connections...</td></tr>
+                <% } %>
+            </tbody>
+        </table>
+
+        <h2>Blocked Clients</h2>
+        <table class="client-table">
+            <thead>
+                <tr>
+                    <th>Client ID</th>
+                    <th>IP Address</th>
+                    <th>Blocked At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                 <% if (Object.keys(blocked).length > 0) { %>
+                    <% for(const clientId in blocked) { const client = blocked[clientId]; %>
+                        <tr>
+                            <td><%= clientId %></td>
+                            <td><%= client.ip %></td>
+                            <td><%= client.blocked_at.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) %></td>
+                            <td>
+                                <form action="/unblock" method="POST" style="display: inline;">
+                                    <input type="hidden" name="client_id" value="<%= clientId %>">
+                                    <button type="submit" class="action-btn unblock">Unblock</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% } %>
+                <% } else { %>
+                    <tr><td colspan="4" class="no-clients">No clients are currently blocked.</td></tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

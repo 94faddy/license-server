@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+:root {
+    --bg-dark: #1a1a2e;
+    --bg-light: #16213e;
+    --primary: #0f3460;
+    --secondary: #e94560;
+    --text-light: #e0e0e0;
+    --text-dark: #a0a0a0;
+    --green: #34c759;
+    --gray: #8e8e93;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    background-color: var(--bg-light);
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Login Page Styles */
+.login-container {
+    max-width: 400px;
+}
+
+h1 {
+    text-align: center;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.8rem;
+    background-color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+    color: var(--text-light);
+    font-size: 1rem;
+}
+
+.btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--secondary);
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: #d83a56;
+}
+
+.error-message {
+    text-align: center;
+    color: var(--secondary);
+    background-color: rgba(233, 69, 96, 0.1);
+    padding: 0.7rem;
+    border-radius: 5px;
+    margin-top: 1rem;
+}
+
+/* Dashboard Styles */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--primary);
+    padding-bottom: 1rem;
+}
+
+.header h1 {
+    margin-bottom: 0;
+}
+
+.logout-form button {
+    background: none;
+    border: 1px solid var(--text-dark);
+    color: var(--text-dark);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.logout-form button:hover {
+    background-color: var(--primary);
+    color: var(--text-light);
+}
+
+.client-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.client-table th, .client-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--primary);
+}
+
+.client-table th {
+    color: var(--text-dark);
+    font-weight: 700;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-active {
+    background-color: var(--green);
+}
+
+.status-inactive {
+    background-color: var(--gray);
+}
+
+.no-clients {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-dark);
+}
