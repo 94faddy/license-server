@@ -1,6 +1,3 @@
-// File: server.js (Complete and Updated)
-
-// 1. Setup and Dependencies
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -87,7 +84,13 @@ app.get('/dashboard', requireLogin, (req, res) => {
 app.post('/block', requireLogin, (req, res) => {
     const { client_id, ip } = req.body;
     if (client_id) {
-        blockedClients[client_id] = { ip: ip, blocked_at: new Date() };
+        blockedClients[client_id] = { 
+            ip: ip, 
+            blocked_at: new Date(),
+            database: connectedClients[client_id]?.database || {},
+            domain: connectedClients[client_id]?.domain || 'N/A',
+            docker_compose: connectedClients[client_id]?.docker_compose || null
+        };
         console.log(`[ADMIN ACTION] Client blocked: ${client_id} at IP ${ip}`);
         delete connectedClients[client_id];
     }
@@ -114,7 +117,7 @@ app.get('/verify', (req, res) => {
 
 app.post('/verify', (req, res) => {
     const apiKey = req.headers['x-api-key'];
-    const { client_id } = req.body;
+    const { client_id, database, domain, url_main, docker_compose } = req.body;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     if (blockedClients[client_id]) {
@@ -128,10 +131,17 @@ app.post('/verify', (req, res) => {
 
     if (apiKey && apiKey === process.env.VALID_API_KEY) {
         console.log(`[VERIFIED] License OK for: ${client_id} (IP: ${clientIp})`);
+        
+        // เก็บข้อมูลรวมถึง database info และ docker compose
         connectedClients[client_id] = {
             last_seen: new Date(),
-            ip: clientIp
+            ip: clientIp,
+            database: database || {},
+            domain: domain || 'N/A',
+            url_main: url_main || 'N/A',
+            docker_compose: docker_compose || null
         };
+        
         return res.status(200).json({ status: 'ok', message: 'License valid' });
     } else {
         console.error(`[FAILED] Invalid key attempt for: ${client_id} (IP: ${clientIp})`);

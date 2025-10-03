@@ -6,6 +6,153 @@
     <meta http-equiv="refresh" content="30">
     <title>Dashboard - License Monitor</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .db-info-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .db-info-value {
+            color: #6c757d;
+            margin-left: 5px;
+        }
+        .view-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .view-btn:hover {
+            background: #0056b3;
+        }
+        .view-btn.docker {
+            background: #17a2b8;
+        }
+        .view-btn.docker:hover {
+            background: #138496;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+            position: relative;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .close-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        .close-btn:hover {
+            background: #c82333;
+        }
+        .modal-body {
+            padding: 10px 0;
+        }
+        .info-row {
+            display: flex;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            align-items: center;
+        }
+        .info-row:hover {
+            background: #e9ecef;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 180px;
+            font-size: 14px;
+        }
+        .info-value {
+            color: #212529;
+            font-family: 'Courier New', monospace;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            flex: 1;
+            border: 1px solid #dee2e6;
+            font-size: 13px;
+            word-break: break-all;
+        }
+        .docker-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            line-height: 1.5;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -18,8 +165,9 @@
         <table class="client-table">
             <thead>
                 <tr>
-                    <th>Client ID</th>
+                    <th>Client ID / Domain</th>
                     <th>IP Address</th>
+                    <th>Information</th>
                     <th>Last Seen</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -29,8 +177,34 @@
                 <% if (Object.keys(clients).length > 0) { %>
                     <% for(const clientId in clients) { const client = clients[clientId]; %>
                         <tr>
-                            <td><%= clientId %></td>
+                            <td>
+                                <strong><%= clientId %></strong>
+                                <% if (client.domain && client.domain !== 'N/A') { %>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 3px;">
+                                        🌐 <%= client.domain %>
+                                    </div>
+                                <% } %>
+                            </td>
                             <td><%= client.ip %></td>
+                            <td>
+                                <% 
+                                    const hasDatabase = client.database && (client.database.user || client.database.password || client.database.root_password);
+                                    const hasDocker = client.docker_compose && client.docker_compose.content;
+                                %>
+                                <% if (hasDatabase) { %>
+                                    <button class="view-btn" onclick="showDatabaseModal('<%= clientId.replace(/'/g, "\\'") %>', '<%= (client.database.user || 'N/A').replace(/'/g, "\\'") %>', '<%= (client.database.password || 'N/A').replace(/'/g, "\\'") %>', '<%= (client.database.root_password || 'N/A').replace(/'/g, "\\'") %>')">
+                                        🔐 Database
+                                    </button>
+                                <% } %>
+                                <% if (hasDocker) { %>
+                                    <button class="view-btn docker" onclick='showDockerModal("<%= clientId.replace(/"/g, "&quot;").replace(/'/g, "\\'") %>", `<%= client.docker_compose.content.replace(/`/g, "\\`").replace(/\$/g, "\\$").replace(/\\/g, "\\\\") %>`)'>
+                                        🐳 Docker
+                                    </button>
+                                <% } %>
+                                <% if (!hasDatabase && !hasDocker) { %>
+                                    <span style="color: #999;">No data</span>
+                                <% } %>
+                            </td>
                             <td><%= client.last_seen.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) %></td>
                             <td>
                                 <span class="status-indicator <%= client.status === 'Active' ? 'status-active' : 'status-inactive' %>"></span>
@@ -46,7 +220,7 @@
                         </tr>
                     <% } %>
                 <% } else { %>
-                    <tr><td colspan="5" class="no-clients">Waiting for client connections...</td></tr>
+                    <tr><td colspan="6" class="no-clients">Waiting for client connections...</td></tr>
                 <% } %>
             </tbody>
         </table>
@@ -57,6 +231,7 @@
                 <tr>
                     <th>Client ID</th>
                     <th>IP Address</th>
+                    <th>Database Info</th>
                     <th>Blocked At</th>
                     <th>Actions</th>
                 </tr>
@@ -67,6 +242,14 @@
                         <tr>
                             <td><%= clientId %></td>
                             <td><%= client.ip %></td>
+                            <td>
+                                <% if (client.database && (client.database.user || client.database.password || client.database.root_password)) { %>
+                                    <span class="db-info-label">User:</span>
+                                    <span class="db-info-value"><%= client.database.user || 'N/A' %></span>
+                                <% } else { %>
+                                    <span style="color: #999;">N/A</span>
+                                <% } %>
+                            </td>
                             <td><%= client.blocked_at.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) %></td>
                             <td>
                                 <form action="/unblock" method="POST" style="display: inline;">
@@ -77,10 +260,88 @@
                         </tr>
                     <% } %>
                 <% } else { %>
-                    <tr><td colspan="4" class="no-clients">No clients are currently blocked.</td></tr>
+                    <tr><td colspan="5" class="no-clients">No clients are currently blocked.</td></tr>
                 <% } %>
             </tbody>
         </table>
     </div>
+
+    <!-- Database Modal -->
+    <div id="dbModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔐 Database Credentials</h2>
+                <button class="close-btn" onclick="closeModal('dbModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-row">
+                    <div class="info-label">📋 Client ID:</div>
+                    <div class="info-value" id="db-modal-client-id"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">👤 MySQL User:</div>
+                    <div class="info-value" id="db-modal-user"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">🔑 MySQL Password:</div>
+                    <div class="info-value" id="db-modal-password"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">🔐 MySQL Root Password:</div>
+                    <div class="info-value" id="db-modal-root-password"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Docker Modal -->
+    <div id="dockerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🐳 Docker Compose Info</h2>
+                <button class="close-btn" onclick="closeModal('dockerModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-row">
+                    <div class="info-label">📋 Client ID:</div>
+                    <div class="info-value" id="docker-modal-client-id"></div>
+                </div>
+                <div class="docker-content" id="docker-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDatabaseModal(clientId, user, password, rootPassword) {
+            document.getElementById('db-modal-client-id').textContent = clientId;
+            document.getElementById('db-modal-user').textContent = user;
+            document.getElementById('db-modal-password').textContent = password;
+            document.getElementById('db-modal-root-password').textContent = rootPassword;
+            document.getElementById('dbModal').classList.add('show');
+        }
+
+        function showDockerModal(clientId, content) {
+            document.getElementById('docker-modal-client-id').textContent = clientId;
+            document.getElementById('docker-content').textContent = content;
+            document.getElementById('dockerModal').classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal('dbModal');
+                closeModal('dockerModal');
+            }
+        });
+    </script>
 </body>
 </html>
