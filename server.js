@@ -8,9 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 let connectedClients = {};
-let blockedClients = {}; // In-memory blocklist
+let blockedClients = {};
 
-// 2. Middleware Configuration
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -22,7 +21,7 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        maxAge: 1000 * 60 * 60, // 1 hour
+        maxAge: 1000 * 60 * 60,
         httpOnly: true
     }
 }));
@@ -34,7 +33,6 @@ const requireLogin = (req, res, next) => {
     next();
 };
 
-// 3. Routes
 app.get('/', (req, res) => {
     if (req.session.userId) {
         res.redirect('/dashboard');
@@ -72,7 +70,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
     for (const clientId in connectedClients) {
         const client = connectedClients[clientId];
         const lastSeen = client.last_seen;
-        const isActive = (now - lastSeen) / 1000 < 300; // Active if seen in the last 5 minutes
+        const isActive = (now - lastSeen) / 1000 < 300;
         clientsForView[clientId] = {
             ...client,
             status: isActive ? 'Active' : 'Inactive'
@@ -106,7 +104,6 @@ app.post('/unblock', requireLogin, (req, res) => {
     res.redirect('/dashboard');
 });
 
-// 4. API Endpoint for License Verification
 app.get('/verify', (req, res) => {
     res.status(200).json({
         status: "info",
@@ -120,6 +117,16 @@ app.post('/verify', (req, res) => {
     const { client_id, database, domain, url_main, docker_compose } = req.body;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
+    // Debug log
+    console.log('📦 Received payload:', JSON.stringify({
+        client_id: client_id,
+        has_database: !!database,
+        database_user: database?.user || 'N/A',
+        has_docker: !!docker_compose,
+        domain: domain,
+        url_main: url_main
+    }, null, 2));
+
     if (blockedClients[client_id]) {
         console.error(`[BLOCKED] Rejected connection from blocked client_id: ${client_id} (IP: ${clientIp})`);
         return res.status(403).json({ status: 'error', message: 'License has been disabled by administrator.' });
@@ -132,7 +139,6 @@ app.post('/verify', (req, res) => {
     if (apiKey && apiKey === process.env.VALID_API_KEY) {
         console.log(`[VERIFIED] License OK for: ${client_id} (IP: ${clientIp})`);
         
-        // เก็บข้อมูลรวมถึง database info และ docker compose
         connectedClients[client_id] = {
             last_seen: new Date(),
             ip: clientIp,
@@ -149,7 +155,6 @@ app.post('/verify', (req, res) => {
     }
 });
 
-// 5. Start the Server
 app.listen(PORT, () => {
     console.log(`🔑 License Server with Dashboard is running on http://localhost:${PORT}`);
     if (!process.env.ADMIN_PASSWORD_HASH) {
